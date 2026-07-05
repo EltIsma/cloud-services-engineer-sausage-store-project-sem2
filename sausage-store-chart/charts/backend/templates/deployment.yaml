@@ -11,7 +11,8 @@ metadata:
     app.kubernetes.io/managed-by: "{{ .Release.Service }}"
     helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     app.kubernetes.io/component: {{ .Chart.Name }}
-    app.kubernetes.io/part-of: {{ .Release.Name }}
+    app.kubernetes.io/part-of: sausage-store
+    env: "{{ .Values.global.environment }}"
 spec:
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   replicas: {{ .Values.replicas }}

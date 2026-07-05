@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongodb-init-reports-user
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mongodb-init
+          image: mongo:7.0
+          envFrom:
+            - configMapRef:
+                name: mongodb-conf
+          env:
+            - name: MONGO_REPORTS_USERNAME
+              value: {{ .Values.mongodb.reportsUser.username }}
+            - name: MONGO_REPORTS_PASSWORD
+              value: {{ .Values.mongodb.reportsUser.password }}
+            - name: MONGO_REPORTS_DB
+              value: {{ .Values.mongodb.reportsUser.database }}
+          resources:
+{{ toYaml .Values.mongodb.reportsUser.jobResources | indent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              until mongosh "mongodb://$MONGO_INITDB_ROOT_USERNAME:$MONGO_INITDB_ROOT_PASSWORD@mongodb:27017/admin" --eval "
+                db.getSiblingDB('$MONGO_REPORTS_DB').createUser({
+                  user: '$MONGO_REPORTS_USERNAME',
+                  pwd: '$MONGO_REPORTS_PASSWORD',
+                  roles: [{ role: 'readWrite', db: '$MONGO_REPORTS_DB' }]
+                })
+              "; do
+                echo "mongodb is not ready yet, retrying in 5s..."
+                sleep 5
+              done
